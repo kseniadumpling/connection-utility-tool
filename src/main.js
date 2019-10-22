@@ -43,7 +43,7 @@ let storages = {
 };
 
 if (env.DEMO_MODE) {
-    storages = demoData;
+    storages = demo_data;
 }
 
 // function JSON.stringify():  convert object into a string
@@ -270,7 +270,7 @@ function appOnDown(service) {
 function bonjourLoad(refresh) {
     // reset of existing data
     if (refresh) {
-        const data = env.DEMO_MODE ? demoData : {storages : []};
+        const data = env.DEMO_MODE ? demo_data : {storages : []};
         storages = jsonParseString(data);
     }
 
