@@ -1,18 +1,18 @@
-"use strict";
+'use strict';
 
 /**
  * main.js need to create application window.
  * And parse appliances data. (from network or demo data)
  */
 
-const env = require("./app_environment");
-const demo_data = require("./demo/demo_data");
+const env = require('./app_environment');
+const demo_data = require('./demo/demo_data');
 
-const { app, BrowserWindow, ipcMain } = require('electron');
+const {app, BrowserWindow, ipcMain} = require('electron');
 const path = require('path');
 const url = require('url');
 const os = require('os');
-const productName = "ProductName";
+const productName = 'ProductName';
 
 let win;
 
@@ -20,7 +20,7 @@ function allInterfaces() {
     const networks = os.networkInterfaces();
     const res = [];
 
-    Object.keys(networks).forEach((k) => {
+    Object.keys(networks).forEach(k => {
         for (let i = 0; i < networks[k].length; i++) {
             const iface = networks[k][i];
             if (iface.family === 'IPv4') {
@@ -71,9 +71,19 @@ function clone(obj) {
 
 function currDate() {
     const d = new Date();
-    return ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2) + ':'
-        + ('0' + d.getSeconds()).slice(-2) + ' ' + ('0' + d.getDate()).slice(-2) + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-'
-        + d.getFullYear();
+    return (
+        ('0' + d.getHours()).slice(-2) +
+        ':' +
+        ('0' + d.getMinutes()).slice(-2) +
+        ':' +
+        ('0' + d.getSeconds()).slice(-2) +
+        ' ' +
+        ('0' + d.getDate()).slice(-2) +
+        '-' +
+        ('0' + (d.getMonth() + 1)).slice(-2) +
+        '-' +
+        d.getFullYear()
+    );
 }
 
 function addTypeInLogs(obj) {
@@ -99,30 +109,30 @@ function splicing(tmpLog, newelem) {
 }
 
 function getModelByCode(code, type) {
-    var productModel = "";
-    switch(code) {
-        case "EX-1":
-            productModel = "1000";
+    var productModel = '';
+    switch (code) {
+        case 'EX-1':
+            productModel = '1000';
             break;
-        case "EX-2":
-            productModel = "3000";
+        case 'EX-2':
+            productModel = '3000';
             break;
-        case "EX-3":
-            productModel = "5000";
+        case 'EX-3':
+            productModel = '5000';
             break;
-        case "EX-4":
-            productModel = "7000";
+        case 'EX-4':
+            productModel = '7000';
             break;
-        case "EX-5":
-            productModel = "9000";
+        case 'EX-5':
+            productModel = '9000';
             break;
     }
 
-    var typePostfix = "";
+    var typePostfix = '';
     if (type === 'HCI') {
-        typePostfix = "X";
+        typePostfix = 'X';
     }
-    return productName + " " + productModel + typePostfix;
+    return productName + ' ' + productModel + typePostfix;
 }
 
 // The event handler for the emergence of a new device in the network
@@ -132,22 +142,22 @@ function appOnUp(service) {
 
     // New discovered system name parsing
 
-// Service format should be (underscore delimited only):
-// PSA|PSC_<SOMENAME>_<code-version>_<system-type>_<system-model>_<HW type>_Unified|Block_<system-state>
-//    0         1           2              3              4           5           6             7
+    // Service format should be (underscore delimited only):
+    // PSA|PSC_<SOMENAME>_<code-version>_<system-type>_<system-model>_<HW type>_Unified|Block_<system-state>
+    //    0         1           2              3              4           5           6             7
 
     const serviceNames = service.name.split('_');
     if (serviceNames[0] === 'PSA' || serviceNames[0] === 'PSC') {
         let tmp = JSON.parse(storages);
         let tmpLog = JSON.parse(detectionLog);
         let newElement = {
-            "link": "",
-            "name": "",
-            "state": "",
-            "type": "",
-            "model": "",
-            "cluster": "",
-            "failed": ""
+            link: '',
+            name: '',
+            state: '',
+            type: '',
+            model: '',
+            cluster: '',
+            failed: ''
         };
         console.log('Success');
 
@@ -158,27 +168,25 @@ function appOnUp(service) {
         //URL to access the system
         newElement.link = 'https://' + service.referer.address + ':' + service.port;
         //System type
-        newElement.type = (serviceNames[3] === 'X') ? 'HCI' : 'BM';
+        newElement.type = serviceNames[3] === 'X' ? 'HCI' : 'BM';
         //System model
         newElement.model = getModelByCode(serviceNames[4], newElement.type);
 
         //System state
-//  "Unconfigured", 0                 // system in factory state
-//  "Unconfigured_Faulted", 1       // Hardware is in faulted state
-//  "Configuring", 2                   // In the midst of being configured or unconfigured
-//  "Configured", 3                     // system is configured
-//  "Expanding", 4                       // System is adding a new appliance
-//  "Removing", 5                         // System is removing an appliance
-//  "Clustering_Failed", 6       // system in a bad state
-//  "Unknown", 99                          // unknown state
+        //  "Unconfigured", 0               // system in factory state
+        //  "Unconfigured_Faulted", 1       // Hardware is in faulted state
+        //  "Configuring", 2                // In the midst of being configured or unconfigured
+        //  "Configured", 3                 // system is configured
+        //  "Expanding", 4                  // System is adding a new appliance
+        //  "Removing", 5                   // System is removing an appliance
+        //  "Clustering_Failed", 6          // system in a bad state
+        //  "Unknown", 99                   // unknown state
 
         if (serviceNames[7] === '0' || serviceNames[7] === '1') {
             newElement.state = 'unconfigured';
-        }
-        else if (serviceNames[7] === '3' || serviceNames[7] === '4' || serviceNames[7] === '5') {
+        } else if (serviceNames[7] === '3' || serviceNames[7] === '4' || serviceNames[7] === '5') {
             newElement.state = 'configured';
-        }
-        else {
+        } else {
             newElement.state = 'service state';
         }
 
@@ -193,37 +201,29 @@ function appOnUp(service) {
         if (tmp != null) {
             if (tmp.storages.length === 0) {
                 tmp.storages.push(newElement);
-                tmpLog.storages.splice(0, 0, addTypeInLogs(newElement));
-                console.log('Discovered appliance:\n' + jsonParseString(tmpLog.storages[0]) + '\n');
-                if (tmpLog.storages.length > 1000) {
-                    tmpLog.storages.splice(1000, tmpLog.storages.length - 1000);
-                }
+                splicing(tmpLog, newElement);
             } else {
-                var isInserted = false;
-                for (var i = 0; i < tmp.storages.length; i++) {
+                let isInserted = false;
+                for (let i = 0; i < tmp.storages.length; i++) {
                     if (tmp.storages[i].name === newElement.name) {
                         isInserted = true;
                         break;
                     }
                     if (tmp.storages[i].name > newElement.name) {
                         tmp.storages.splice(i, 0, newElement);
-                        tmpLog.storages.splice(0, 0, addTypeInLogs(newElement));
-                        console.log('Discovered appliance:\n' + jsonParseString(tmpLog.storages[0]) + '\n');
-                        if (tmpLog.storages.length > 1000) {
-                            tmpLog.storages.splice(1000, tmpLog.storages.length - 1000);
-                        }
+                        splicing(tmpLog, newElement);
                         isInserted = true;
                         break;
                     }
                 }
                 if (!isInserted) {
-                    tmp.storages.push(newelem);
-                    splicing(tmpLog, newelem);
+                    tmp.storages.push(newElement);
+                    splicing(tmpLog, newElement);
                 }
             }
         } else {
-            tmp.storages.push(newelem);
-            splicing(tmpLog, newelem);
+            tmp.storages.push(newElement);
+            splicing(tmpLog, newElement);
         }
         storages = jsonParseString(tmp);
         detectionLog = jsonParseString(tmpLog);
@@ -231,9 +231,7 @@ function appOnUp(service) {
         // Send data to the UI part
         try {
             win.webContents.send('ping', storages, detectionLog);
-        } catch (err) {
-
-        }
+        } catch (err) {}
     } else {
         console.log('Service does not match the name parameters');
     }
@@ -261,16 +259,14 @@ function appOnDown(service) {
     detectionLog = jsonParseString(tmpLog);
     try {
         win.webContents.send('ping', storages, detectionLog);
-    } catch (err) {
-
-    }
+    } catch (err) {}
 }
 
 // Restart services browsing in the network
 function bonjourLoad(refresh) {
     // reset of existing data
     if (refresh) {
-        const data = env.DEMO_MODE ? demo_data : {storages : []};
+        const data = env.DEMO_MODE ? demo_data : {storages: []};
         storages = jsonParseString(data);
     }
 
@@ -282,10 +278,8 @@ function bonjourLoad(refresh) {
     browser.on('down', appOnDown);
 
     try {
-        win.webContents.send('ping', storages, detectionLog)
-    } catch (err) {
-
-    }
+        win.webContents.send('ping', storages, detectionLog);
+    } catch (err) {}
 }
 
 bonjourLoad(false);
@@ -302,10 +296,8 @@ ipcMain.on('clearDetectLog', () => {
     };
     detectionLog = jsonParseString(logs);
     try {
-        win.webContents.send('ping', storages, detectionLog)
-    } catch (err) {
-
-    }
+        win.webContents.send('ping', storages, detectionLog);
+    } catch (err) {}
 });
 
 let connectWindow;
@@ -327,7 +319,6 @@ ipcMain.on('connect-to-appliance', (event, arg) => {
         win.webContents.send('redirect-to-browser', linkToAppliance);
     });
 });
-
 
 app.on('certificate-error', (event, webContents, url, error, certificate, callback) => {
     console.log('cert-error');
@@ -371,10 +362,9 @@ app.on('certificate-error', (event, webContents, url, error, certificate, callba
         });
 
         // stderr from cert exe
-        child.stderr.on('data', (data) => {
+        child.stderr.on('data', data => {
             console.log(`stderr: ${data}`);
             win.webContents.send('print-to-console', data);
-
         });
 
         // cert exe closed (certificate imported)
@@ -388,11 +378,10 @@ app.on('certificate-error', (event, webContents, url, error, certificate, callba
             }
         });
     } else {
-            //open browser wihtout caring about certificates if we are not on Windows
-            if (linkToAppliance) {
-                win.webContents.send("redirect-to-browser", linkToAppliance);
-            }
-
+        //open browser wihtout caring about certificates if we are not on Windows
+        if (linkToAppliance) {
+            win.webContents.send('redirect-to-browser', linkToAppliance);
+        }
     }
 });
 
@@ -404,16 +393,18 @@ function createWindow() {
         minWidth: 800,
         minHeight: 650,
         icon: __dirname,
-        autoHideMenuBar: true,
+        autoHideMenuBar: true
         // frame: false
     });
 
     // download index.html
-    win.loadURL(url.format({
-        pathname: path.join(__dirname, 'index.html'),
-        protocol: 'file:',
-        slashes: true
-    }));
+    win.loadURL(
+        url.format({
+            pathname: path.join(__dirname, 'index.html'),
+            protocol: 'file:',
+            slashes: true
+        })
+    );
 
     // Developer Menu
     //const mainMenu = Menu.buildFromTemplate(mainMenuTemplate);
@@ -426,24 +417,18 @@ function createWindow() {
 
     win.webContents.on('did-finish-load', () => {
         try {
-            win.webContents.send('ping', storages, detectionLog)
-        } catch (err) {
-
-        }
+            win.webContents.send('ping', storages, detectionLog);
+        } catch (err) {}
     });
     win.webContents.on('will-finish-launching', () => {
         try {
-            win.webContents.send('ping', storages, detectionLog)
-        } catch (err) {
-
-        }
+            win.webContents.send('ping', storages, detectionLog);
+        } catch (err) {}
     });
     win.webContents.on('page-title-updated', () => {
         try {
-            win.webContents.send('ping', storages, detectionLog)
-        } catch (err) {
-
-        }
+            win.webContents.send('ping', storages, detectionLog);
+        } catch (err) {}
     });
     win.on('closed', () => {
         app.quit();
@@ -459,4 +444,4 @@ app.on('window-all-closed', () => {
         app.quit();
         bonjour.destroy();
     }
-})
+});
