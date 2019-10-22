@@ -22,7 +22,7 @@
   margin-left: 10px;
   margin-right: 10px;
 }
-
+//custom checkbox
 .container-check {
   display: block;
   position: relative;
@@ -89,18 +89,30 @@
   transform: rotate(45deg);
 }
 
-
+//appliance name and type styles
 .app-name {
   padding-top: 12px;
   margin-left: 50px;
   width: 100px;
 }
 
-.app-type {
+.app-model {
   padding-top: 12px;
   margin-left: 95px;
 }
 
+//system status
+.app-failed-true {
+  visibility: visible;
+  margin-left: 50px;
+}
+
+//system status
+.app-failed-false {
+  visibility: hidden;
+}
+
+//custom dropdown dialog styles
 .custom-dropdown {
   margin-left: auto;
   margin-right: 10px;
@@ -111,6 +123,7 @@
   cursor: pointer;
 }
 
+//custom radio button
 .radio-button {
   display: block;
   position: relative;

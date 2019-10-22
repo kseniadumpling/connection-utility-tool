@@ -5,13 +5,14 @@
  * And parse appliances data. (from network or demo data)
  */
 
-const env = require('./app_environment');
-const demoData = require('./demo/demo_data');
+const env = require("./app_environment");
+const demo_data = require("./demo/demo_data");
 
 const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
 const url = require('url');
 const os = require('os');
+const productName = "ProductName";
 
 let win;
 
@@ -97,66 +98,120 @@ function splicing(tmpLog, newelem) {
     }
 }
 
+function getModelByCode(code, type) {
+    var productModel = "";
+    switch(code) {
+        case "EX-1":
+            productModel = "1000";
+            break;
+        case "EX-2":
+            productModel = "3000";
+            break;
+        case "EX-3":
+            productModel = "5000";
+            break;
+        case "EX-4":
+            productModel = "7000";
+            break;
+        case "EX-5":
+            productModel = "9000";
+            break;
+    }
+
+    var typePostfix = "";
+    if (type === 'HCI') {
+        typePostfix = "X";
+    }
+    return productName + " " + productModel + typePostfix;
+}
+
 // The event handler for the emergence of a new device in the network
 function appOnUp(service) {
     console.log('#######################################\nadding');
-    console.log(`Service found under the name: ${service.name}`);
+    console.log('System found under the name: ' + service.name);
 
-    // New discovered device name parsing
-    const namearr = service.name.split('_');
-    if ((namearr[0] === 'PSApp') || (namearr[0] === 'PSCluster')) {
-        const tmp = JSON.parse(storages);
-        const tmpLog = JSON.parse(detectionLog);
-        const newelem = {
-            link: '',
-            name: '',
-            state: '',
-            type: '',
-            cluster: ''
+    // New discovered system name parsing
+
+// Service format should be (underscore delimited only):
+// PSA|PSC_<SOMENAME>_<code-version>_<system-type>_<system-model>_<HW type>_Unified|Block_<system-state>
+//    0         1           2              3              4           5           6             7
+
+    const serviceNames = service.name.split('_');
+    if (serviceNames[0] === 'PSA' || serviceNames[0] === 'PSC') {
+        let tmp = JSON.parse(storages);
+        let tmpLog = JSON.parse(detectionLog);
+        let newElement = {
+            "link": "",
+            "name": "",
+            "state": "",
+            "type": "",
+            "model": "",
+            "cluster": "",
+            "failed": ""
         };
         console.log('Success');
-        newelem.name = namearr[1];
-        newelem.link = `https://${service.referer.address}:${service.port}`;
-        // Define cluster or app
-        if (namearr[0] === 'PSCluster') {
-            newelem.cluster = 'true';
-        } else {
-            newelem.cluster = 'false';
-        }
-        // Define the type
-        if (namearr[2] === 'Virtual') {
-            newelem.type = 'VMware';
-        } else if (namearr[2].length === 10) {
-            newelem.type = "SAN";
-        } else if (namearr[2].length === 11) {
-            newelem.type = "VMware";
-        } else {
-            newelem.type = 'SAN';
-        }
-        // Define the state
-        if (namearr[5] === 'Management' || namearr[4] === 'Management') {
-            newelem.state = 'configured';
-        } else if (namearr[5] === 'Unconfigured' || namearr[4] === 'Unconfigured') {
-            newelem.state = 'unconfigured';
-        } else {
-            newelem.state = 'service state';
-        }
-        console.log('Current appliance:\n' + jsonParseString(newelem));
 
-        if (tmp) {
+        //Is the system part of a cluster or a standalone system
+        newElement.cluster = serviceNames[0] === 'PSA' ? 'false' : 'true';
+        //Cluster name or system service ID
+        newElement.name = serviceNames[1];
+        //URL to access the system
+        newElement.link = 'https://' + service.referer.address + ':' + service.port;
+        //System type
+        newElement.type = (serviceNames[3] === 'X') ? 'HCI' : 'BM';
+        //System model
+        newElement.model = getModelByCode(serviceNames[4], newElement.type);
+
+        //System state
+//  "Unconfigured", 0                 // system in factory state
+//  "Unconfigured_Faulted", 1       // Hardware is in faulted state
+//  "Configuring", 2                   // In the midst of being configured or unconfigured
+//  "Configured", 3                     // system is configured
+//  "Expanding", 4                       // System is adding a new appliance
+//  "Removing", 5                         // System is removing an appliance
+//  "Clustering_Failed", 6       // system in a bad state
+//  "Unknown", 99                          // unknown state
+
+        if (serviceNames[7] === '0' || serviceNames[7] === '1') {
+            newElement.state = 'unconfigured';
+        }
+        else if (serviceNames[7] === '3' || serviceNames[7] === '4' || serviceNames[7] === '5') {
+            newElement.state = 'configured';
+        }
+        else {
+            newElement.state = 'service state';
+        }
+
+        newElement.failed = 'false';
+        // Identify if system is healthy or not
+        if (serviceNames[7] === '1' || serviceNames[7] === '6') {
+            newElement.failed = 'true';
+        }
+
+        console.log('Current appliance:\n' + jsonParseString(newElement));
+        //tmp.storages.push(newElement);
+        if (tmp != null) {
             if (tmp.storages.length === 0) {
-                tmp.storages.push(newelem);
-                splicing(tmpLog, newelem);
+                tmp.storages.push(newElement);
+                tmpLog.storages.splice(0, 0, addTypeInLogs(newElement));
+                console.log('Discovered appliance:\n' + jsonParseString(tmpLog.storages[0]) + '\n');
+                if (tmpLog.storages.length > 1000) {
+                    tmpLog.storages.splice(1000, tmpLog.storages.length - 1000);
+                }
             } else {
-                let isInserted = false;
-                for (let i = 0; i < tmp.storages.length; i++) {
-                    if (tmp.storages[i].name === newelem.name) {
+                var isInserted = false;
+                for (var i = 0; i < tmp.storages.length; i++) {
+                    if (tmp.storages[i].name === newElement.name) {
                         isInserted = true;
                         break;
                     }
-                    if (tmp.storages[i].name > newelem.name) {
-                        tmp.storages.splice(i, 0, newelem);
-                        splicing(tmpLog, newelem);
+                    if (tmp.storages[i].name > newElement.name) {
+                        tmp.storages.splice(i, 0, newElement);
+                        tmpLog.storages.splice(0, 0, addTypeInLogs(newElement));
+                        console.log('Discovered appliance:\n' + jsonParseString(tmpLog.storages[0]) + '\n');
+                        if (tmpLog.storages.length > 1000) {
+                            tmpLog.storages.splice(1000, tmpLog.storages.length - 1000);
+                        }
                         isInserted = true;
                         break;
                     }
@@ -332,6 +387,12 @@ app.on('certificate-error', (event, webContents, url, error, certificate, callba
                 win.webContents.send('redirect-to-browser', linkToAppliance);
             }
         });
+    } else {
+            //open browser wihtout caring about certificates if we are not on Windows
+            if (linkToAppliance) {
+                win.webContents.send("redirect-to-browser", linkToAppliance);
+            }
+
     }
 });
 

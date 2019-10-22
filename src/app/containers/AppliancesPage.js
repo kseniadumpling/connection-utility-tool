@@ -232,8 +232,8 @@ class AppliancesPage extends Component {
             }
 
             //filter appliances to configured and unconfigured
-            let configured = appliances.filter(appliance => appliance.state === "configured" || appliance.state === "service state");
-            let unconfigured = appliances.filter(appliance => appliance.state === "unconfigured");
+            let configured = appliances.filter(appliance => appliance.cluster === "true");
+            let unconfigured = appliances.filter(appliance => appliance.cluster === "false");
 
             //count pages in pagination
             let countConfiguredPages = Math.ceil(configured.length / MAX_APPLIANCES_ON_PAGE);
@@ -280,7 +280,7 @@ class AppliancesPage extends Component {
                 if (pageStateAvailable) {
                     let firstType = unconfigured.filter(appliance => appliance.id === selected_ids[0])[0].type;
 
-                    //check that appliances have same types
+                    //check that appliances have same types and that they are not HCI
                     for (let i = 1; i < countSelectedAppliances; i++) {
                         let nextType = unconfigured.filter(appliance => appliance.id === selected_ids[i])[0].type;
 
@@ -290,6 +290,12 @@ class AppliancesPage extends Component {
                             tooltipMessage = t.MIXED_CLUSTER_WARNING;
                             break;
                         }
+			if (nextType === "HCI") {
+		            isAvailablePopupButton = false;
+                            showTooltipMessage = true;
+                            tooltipMessage = t.MULTI_HCI_CLUSTER_WARNING;
+
+			}
                     }
                 } else {
                     isAvailablePopupButton = false;
