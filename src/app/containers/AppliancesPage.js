@@ -235,8 +235,8 @@ class AppliancesPage extends Component {
 
         //show modal Add To Cluster
         this.getModal = () => {
-            let selectedAppliance = this.state.unconfigured.filter(appliance => appliance.id === this.state.selected_ids[0])[0];
-            let configuredAppliances = this.state.configured.filter(appliance => appliance.type === selectedAppliance.type);
+            const selectedAppliance = this.state.unconfigured.filter(appliance => appliance.id === this.state.selected_ids[0])[0];
+            const configuredAppliances = this.state.configured.filter(appliance => appliance.type === selectedAppliance.type);
             return <SlideOutDialog configured={configuredAppliances} selectedAppliance={selectedAppliance} />;
         };
     }
@@ -385,7 +385,9 @@ class AppliancesPage extends Component {
                                 selected_ids.forEach(element => {
                                     showSettingsInAppliance = false;
                                     if (element === appliance.id) {
-                                        showSettingsInAppliance = pageStateUnconfigured && selected_ids.length === 1;
+                                        // no need to show 'Add to existing cluster' in case of empty existing cluster list
+                                        const configuredWithSameType = configured.filter(cluster => cluster.type === appliance.type);
+                                        showSettingsInAppliance = pageStateUnconfigured && selected_ids.length === 1 && configuredWithSameType.length;
                                         active = true;
                                     }
                                 });
