@@ -4,6 +4,10 @@ import t from "./../locales/translation";
 import Button from "./../components/Button";
 import "../../scss/pages/_welcomepage.scss";
 
+import consta from "../constants/Constants";
+import {isWiFiEnabled} from "../utils/WiFiDetectionUtils";
+import {isServiceLANReachable} from "../utils/IpCheckUtils";
+
 const {shell} = require("electron");
 import {Redirect} from "react-router-dom";
 import SlideOutMessageDialog from "../components/SlideOutMessageDialog";
@@ -15,12 +19,12 @@ class WelcomePage extends Component {
     constructor(props) {
         super(props);
 
+        const c = consta.PLATFORM_TYPES.LINUX;
         this.state = {
             modalBody: null,
-            modalTitle: null
-        };
-
-        this.state = {
+            modalTitle: null,
+            isWiFiEnabled: false,
+            isServiseLANReachable: false,
             redirectToSearch: false
         };
 
@@ -116,6 +120,34 @@ class WelcomePage extends Component {
                 redirectToSearch: true
             });
         };
+
+        this.isWiFiEnabled = this.isWiFiEnabled.bind(this);
+    }
+
+    checkEnvironment() {
+        if (isWiFiEnabled() !== this.state.isWiFiEnabled) {
+            this.setState({
+                isWiFiEnabled: !isWiFiEnabled
+            });
+        }
+        if (isServiceLANReachable() !== this.state.isServiseLANReachable) {
+            this.setState({
+                isServiseLANReachable: !isServiseLANReachable
+            });
+        }
+    }
+
+    componentDidMount() {
+        this.checkEnvironment();
+        setInterval(() => this.checkEnvironment(), 3000);
+    }
+
+    renderWiFiBlock() {
+        return this.state.isWiFiEnabled ? (<h6> Wi-Fi : <b className="red"> enabled </b> </h6>) : (<h6> Wi-Fi : disabled </h6>);
+    }
+
+    renderServiceLANBlock() {
+        return this.state.isServiceLANReachable ? (<h6> Service LAN : reachable </h6>) : (<h6> Service LAN : <b className="red"> unreachable </b></h6>);
     }
 
     render() {
@@ -163,6 +195,12 @@ class WelcomePage extends Component {
                         <p className="show-link" data-toggle="modal" data-target="#modal" onClick={this.clickOnShowDisableFirewall}>
                             {t.SHOW_ME_HOW}
                         </p>
+                    </div>
+                    <div className="row justify-content-center">
+                        {this.renderWiFiBlock()}
+                    </div>
+                    <div className="row justify-content-center">
+                        {this.renderServiceLANBlock()}
                     </div>
                     <div className="row justify-content-center scan-appliances">
                         <Button available={true} text={t.SCAN_APPLIANCES} onClick={this.clickOnScanBtn} />
